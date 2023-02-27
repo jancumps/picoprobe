@@ -2,7 +2,7 @@
 Picoprobe allows a Pico / RP2040 to be used as USB -> SWD and UART bridge. This means it can be used as a debugger and serial console for another Pico.
 
 # Picoprobe for Seeed Xiao
-The xiao branch of this fork ports the Picoprobe firmware to Seeed Xiao board.
+The xiao branch of this fork ports the Picoprobe firmware to Seeed Xiao board.  
 Differences:  
 because the xiao doesn't break out GP4 and GP5, the UART settings are moved to GP0 and GP1:
 ```c++
