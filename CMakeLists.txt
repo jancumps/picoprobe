@@ -35,20 +35,25 @@ target_include_directories(picoprobe PRIVATE
 
 target_compile_options(picoprobe PRIVATE -Wall)
 
-if (DEFINED ENV{PICOPROBE_LED})
-        message("PICOPROBE_LED is defined as " $ENV{PICOPROBE_LED})
-        target_compile_definitions(picoprobe PRIVATE PICOPROBE_LED=$ENV{PICOPROBE_LED})
-endif()
-
-set(DBG_PIN_COUNT=4)
-
 pico_generate_pio_header(picoprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
+pico_generate_pio_header(picoprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_oen.pio)
 
 target_include_directories(picoprobe PRIVATE src)
 
 target_compile_definitions (picoprobe PRIVATE
 	PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1
 )
+
+option (DEBUGPROBE "compile for the debugprobe" OFF)
+if (DEBUGPROBE)
+    target_compile_definitions (picoprobe PRIVATE 
+	DEBUGPROBE=1
+    )
+    set_target_properties(picoprobe PROPERTIES 
+        OUTPUT_NAME "debugprobe"
+    )
+endif ()
+
 
 target_link_libraries(picoprobe PRIVATE
         pico_multicore
