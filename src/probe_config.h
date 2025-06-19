@@ -23,30 +23,64 @@
  *
  */
 
-#ifndef PROBE_H_
-#define PROBE_H_
+#ifndef PROBE_CONFIG_H_
+#define PROBE_CONFIG_H_
 
-#if defined(PROBE_IO_RAW) || defined(PROBE_IO_SWDI)
-#include "probe.pio.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+#if false
+#define probe_info(format,args...) \
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_info(format,...) ((void)0)
 #endif
 
-#if defined(PROBE_IO_OEN)
-#include "probe_oen.pio.h"
+
+#if false
+#define probe_debug(format,args...) \
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_debug(format,...) ((void)0)
 #endif
 
-void probe_set_swclk_freq(uint freq_khz);
+#if false
+#define probe_dump(format,args...)\
+do { \
+	vTaskSuspendAll(); \
+	printf(format, ## args); \
+	xTaskResumeAll(); \
+} while (0)
+#else
+#define probe_dump(format,...) ((void)0)
+#endif
 
-// Bit counts in the range 1..256
-void probe_write_bits(uint bit_count, uint32_t data_byte);
-uint32_t probe_read_bits(uint bit_count);
-void probe_hiz_clocks(uint bit_count);
+// TODO tie this up with PICO_BOARD defines in the main SDK
 
-void probe_read_mode(void);
-void probe_write_mode(void);
+#ifdef DEBUG_ON_PICO 
+#include "board_pico_config.h"
+#else
+#include "board_debug_probe_config.h"
+#endif
+//#include "board_example_config.h"
 
-void probe_init(void);
-void probe_deinit(void);
-void probe_assert_reset(bool state);
-int probe_reset_level(void);
+// Add the configuration to binary information
+void bi_decl_config();
+
+#define PROTO_DAP_V1 1
+#define PROTO_DAP_V2 2
+
+// Interface config
+#ifndef PROBE_DEBUG_PROTOCOL
+#define PROBE_DEBUG_PROTOCOL PROTO_DAP_V2
+#endif
 
 #endif

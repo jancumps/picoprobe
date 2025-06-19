@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 a-pushkin on GitHub
+ * Copyright (c) 2023 Raspberry Pi (Trading) Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,39 +23,33 @@
  *
  */
 
-#include <pico/stdlib.h>
-#include <stdint.h>
+#ifndef BOARD_DEBUG_PROBE_H_
+#define BOARD_DEBUG_PROBE_H_
 
-#include "picoprobe_config.h"
+#define PROBE_IO_SWDI
+#define PROBE_CDC_UART
+// No reset pin 
 
-#define LED_COUNT_SHIFT 14
-#define LED_COUNT_MAX 5 * (1 << LED_COUNT_SHIFT)
+// PIO config
+#define PROBE_SM 0
+#define PROBE_PIN_OFFSET 12
+#define PROBE_PIN_SWCLK (PROBE_PIN_OFFSET + 0)
+// For level-shifted input.
+#define PROBE_PIN_SWDI (PROBE_PIN_OFFSET + 1)
+#define PROBE_PIN_SWDIO (PROBE_PIN_OFFSET + 2)
 
-static uint32_t led_count;
+// UART config
+#define PROBE_UART_TX 4
+#define PROBE_UART_RX 5
+#define PROBE_UART_INTERFACE uart1
+#define PROBE_UART_BAUDRATE 115200
 
-void led_init(void) {
-    led_count = 0;
+#define PROBE_USB_CONNECTED_LED 2
+#define PROBE_DAP_CONNECTED_LED 15
+#define PROBE_DAP_RUNNING_LED 16
+#define PROBE_UART_RX_LED 7
+#define PROBE_UART_TX_LED 8
 
-    gpio_init(PICOPROBE_LED);
-    gpio_set_dir(PICOPROBE_LED, GPIO_OUT);
-    gpio_put(PICOPROBE_LED, 1);
-}
+#define PROBE_PRODUCT_STRING "Debug Probe (CMSIS-DAP)"
 
-
-
-void led_task(void) {
-    if (led_count != 0) {
-        --led_count;
-        gpio_put(PICOPROBE_LED, !((led_count >> LED_COUNT_SHIFT) & 1));
-    }
-}
-
-void led_signal_activity(uint total_bits) {
-    if (led_count == 0) {
-        gpio_put(PICOPROBE_LED, 0);
-    }
-
-    if (led_count < LED_COUNT_MAX) {
-        led_count += total_bits;
-    }
-}
+#endif

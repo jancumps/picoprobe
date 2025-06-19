@@ -6,21 +6,26 @@ set(PICO_BOARD seeed_xiao_rp2040)
 set(FREERTOS_KERNEL_PATH ${CMAKE_CURRENT_LIST_DIR}/freertos)
 include(FreeRTOS_Kernel_import.cmake)
 
-project(picoprobe)
+project(debugprobe)
 
 pico_sdk_init()
 
-add_executable(picoprobe
-        src/led.c
+if (${PICO_SDK_VERSION_MAJOR} LESS 2)
+	message(SEND_ERROR "Version 2 of the Pico SDK is required to compile this project. Please update your installation at ${PICO_SDK_PATH}")
+endif ()
+
+add_executable(debugprobe
+        src/probe_config.c
         src/main.c
         src/usb_descriptors.c
         src/probe.c
         src/cdc_uart.c
         src/get_serial.c
         src/sw_dp_pio.c
+        src/tusb_edpt_handler.c
 )
 
-target_sources(picoprobe PRIVATE
+target_sources(debugprobe PRIVATE
         CMSIS_5/CMSIS/DAP/Firmware/Source/DAP.c
         CMSIS_5/CMSIS/DAP/Firmware/Source/JTAG_DP.c
         CMSIS_5/CMSIS/DAP/Firmware/Source/DAP_vendor.c
@@ -28,30 +33,43 @@ target_sources(picoprobe PRIVATE
         #CMSIS_5/CMSIS/DAP/Firmware/Source/SW_DP.c
         )
 
-target_include_directories(picoprobe PRIVATE
+target_include_directories(debugprobe PRIVATE
         CMSIS_5/CMSIS/DAP/Firmware/Include/
         CMSIS_5/CMSIS/Core/Include/
         include/
         )
 
-target_compile_options(picoprobe PRIVATE -Wall)
+target_compile_options(debugprobe PRIVATE -Wall)
 
-if (DEFINED ENV{PICOPROBE_LED})
-        message("PICOPROBE_LED is defined as " $ENV{PICOPROBE_LED})
-        target_compile_definitions(picoprobe PRIVATE PICOPROBE_LED=$ENV{PICOPROBE_LED})
-endif()
+pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
+pico_generate_pio_header(debugprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe_oen.pio)
 
-set(DBG_PIN_COUNT=4)
+target_include_directories(debugprobe PRIVATE src)
 
-pico_generate_pio_header(picoprobe ${CMAKE_CURRENT_LIST_DIR}/src/probe.pio)
-
-target_include_directories(picoprobe PRIVATE src)
-
-target_compile_definitions (picoprobe PRIVATE
+target_compile_definitions (debugprobe PRIVATE
 	PICO_RP2040_USB_DEVICE_ENUMERATION_FIX=1
 )
 
-target_link_libraries(picoprobe PRIVATE
+option (DEBUG_ON_PICO "Compile firmware for the Pico instead of Debug Probe" OFF)
+if (DEBUG_ON_PICO)
+    target_compile_definitions (debugprobe PRIVATE
+	DEBUG_ON_PICO=1
+    )
+    if (PICO_BOARD STREQUAL "pico")
+        set_target_properties(debugprobe PROPERTIES
+            OUTPUT_NAME "debugprobe_on_pico"
+        )
+    elseif (PICO_BOARD STREQUAL "pico2")
+        set_target_properties(debugprobe PROPERTIES
+            OUTPUT_NAME "debugprobe_on_pico2"
+        )
+    else ()
+        message(SEND_ERROR "Unsupported board ${PICO_BOARD}")
+    endif ()
+endif ()
+
+
+target_link_libraries(debugprobe PRIVATE
         pico_multicore
         pico_stdlib
         pico_unique_id
@@ -62,6 +80,6 @@ target_link_libraries(picoprobe PRIVATE
         FreeRTOS-Kernel-Heap1
 )
 
-pico_set_binary_type(picoprobe copy_to_ram)
+pico_set_binary_type(debugprobe copy_to_ram)
 
-pico_add_extra_outputs(picoprobe)
+pico_add_extra_outputs(debugprobe)

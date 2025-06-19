@@ -44,16 +44,17 @@ This information includes:
  - Optional information about a connected Target Device (for Evaluation Boards).
 */
 #include <pico/stdlib.h>
+#include <hardware/clocks.h>
 #include <hardware/gpio.h>
 
 #include "cmsis_compiler.h"
-#include "picoprobe_config.h"
+#include "probe_config.h"
 #include "probe.h"
 
 /// Processor Clock of the Cortex-M MCU used in the Debug Unit.
 /// This value is used to calculate the SWD/JTAG clock speed.
-/* Picoprobe actually uses kHz rather than Hz, so just lie about it here */
-#define CPU_CLOCK               125000000U      ///< Specifies the CPU Clock in Hz.
+/* Debugprobe uses PIO for clock generation, so return the current system clock. */
+#define CPU_CLOCK               clock_get_hz(clk_sys)
 
 /// Number of processor cycles for I/O Port write operations.
 /// This value is used to calculate the SWD/JTAG clock speed that is generated with I/O
@@ -460,7 +461,11 @@ __STATIC_FORCEINLINE void     PIN_nTRST_OUT  (uint32_t bit) {
 \return Current status of the nRESET DAP hardware I/O pin.
 */
 __STATIC_FORCEINLINE uint32_t PIN_nRESET_IN  (void) {
+#ifdef PROBE_PIN_RESET
+  return probe_reset_level();
+#else
   return (0U);
+#endif
 }
 
 /** nRESET I/O pin: Set Output.
@@ -469,7 +474,11 @@ __STATIC_FORCEINLINE uint32_t PIN_nRESET_IN  (void) {
            - 1: release device hardware reset.
 */
 __STATIC_FORCEINLINE void     PIN_nRESET_OUT (uint32_t bit) {
-  ;
+#ifdef PROBE_PIN_RESET
+  probe_assert_reset(!!bit);
+#else
+  (void) bit;
+#endif
 }
 
 ///@}
@@ -493,14 +502,22 @@ It is recommended to provide the following LEDs for status indication:
            - 1: Connect LED ON: debugger is connected to CMSIS-DAP Debug Unit.
            - 0: Connect LED OFF: debugger is not connected to CMSIS-DAP Debug Unit.
 */
-__STATIC_INLINE void LED_CONNECTED_OUT (uint32_t bit) {}
+__STATIC_INLINE void LED_CONNECTED_OUT (uint32_t bit) {
+#ifdef PROBE_DAP_CONNECTED_LED
+  gpio_put(PROBE_DAP_CONNECTED_LED, bit);
+#endif
+}
 
 /** Debug Unit: Set status Target Running LED.
 \param bit status of the Target Running LED.
            - 1: Target Running LED ON: program execution in target started.
            - 0: Target Running LED OFF: program execution in target stopped.
 */
-__STATIC_INLINE void LED_RUNNING_OUT (uint32_t bit) {}
+__STATIC_INLINE void LED_RUNNING_OUT (uint32_t bit) {
+#ifdef PROBE_DAP_RUNNING_LED
+  gpio_put(PROBE_DAP_RUNNING_LED, bit);
+#endif
+}
 
 ///@}
 
@@ -545,7 +562,16 @@ Status LEDs. In detail the operation of Hardware I/O and LED pins are enabled an
  - LED output pins are enabled and LEDs are turned off.
 */
 __STATIC_INLINE void DAP_SETUP (void) {
-  probe_gpio_init();
+// We synchronously setup probe IOs when the respective PIO program is loaded - not at start of day
+
+#ifdef PROBE_DAP_CONNECTED_LED
+    gpio_init(PROBE_DAP_CONNECTED_LED);
+    gpio_set_dir(PROBE_DAP_CONNECTED_LED, GPIO_OUT);
+#endif
+#ifdef PROBE_DAP_RUNNING_LED
+    gpio_init(PROBE_DAP_RUNNING_LED);
+    gpio_set_dir(PROBE_DAP_RUNNING_LED, GPIO_OUT);
+#endif
 }
 
 /** Reset Target Device with custom specific I/O pin or command sequence.
